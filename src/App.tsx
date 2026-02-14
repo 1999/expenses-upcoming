@@ -6,7 +6,7 @@ import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
-    <KonstaApp theme="ios">
+    <KonstaApp theme="material">
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/add" element={<AddExpensePage />} />

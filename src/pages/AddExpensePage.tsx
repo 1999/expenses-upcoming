@@ -18,7 +18,7 @@ const AddExpensePage = () => {
         left={<NavbarBackLink onClick={() => navigate(-1)} />}
       />
 
-      <List strongIos outlineIos>
+      <List>
         <ListInput
           label="Title"
           type="text"
@@ -39,7 +39,6 @@ const AddExpensePage = () => {
           type="select"
           defaultValue="monthly"
         >
-          <option value="none">One-time</option>
           <option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option>
           <option value="yearly">Yearly</option>
