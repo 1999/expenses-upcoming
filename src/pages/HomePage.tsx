@@ -8,36 +8,39 @@ import {
   Segmented,
   SegmentedButton,
 } from 'konsta/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { initializeDatabase } from '../services/database';
+import { StorageService, type ExpenseOccurrence } from '../services/storage';
 
 const HomePage = () => {
-  const [view, setView] = useState('2weeks');
+  const [view, setView] = useState<'week' | '2weeks' | 'month'>('2weeks');
+  const [expenses, setExpenses] = useState<ExpenseOccurrence[]>([]);
   const navigate = useNavigate();
 
-  // Mock data for skeleton
-  const expenses = [
-    { id: 1, title: 'Netflix', amount: 15.99, date: '2026-02-20' },
-    { id: 2, title: 'Rent', amount: 1200, date: '2026-03-01' },
-    { id: 3, title: 'Gym', amount: 45, date: '2026-02-25' },
-    { id: 4, title: 'Car Loan', amount: 450, date: '2026-02-22' },
-    { id: 5, title: 'Groceries', amount: 200, date: '2026-02-18' },
-    { id: 6, title: 'Insurance', amount: 180, date: '2026-02-28' },
-    { id: 7, title: 'Electricity', amount: 350, date: '2026-03-05' },
-  ];
+  const onDeleteExpense = async (id: string) => {
+    if (window.confirm("Do you want to delete this expense?")) {
+      const db = await initializeDatabase();
+      const storage = new StorageService(db);
+      await storage.deleteExpense(id);
+      setExpenses(expenses.filter((expense) => expense.id !== id));
+    }
+  };
 
-  const filteredExpenses = expenses.filter((expense) => {
-    const expenseDate = new Date(expense.date);
-    const today = new Date('2026-02-15');
-    const diffTime = expenseDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  useEffect(() => {
+    const loadExpenses = async () => {
+      const db = await initializeDatabase();
+      const storage = new StorageService(db);
+      
+      const period = view === '2weeks' ? 'fortnight' : view;
+      const data = await storage.listExpenses(period);
+      setExpenses(data);
+    };
 
-    if (view === 'week') return diffDays <= 7;
-    if (view === '2weeks') return diffDays <= 14;
-    return diffDays <= 30;
-  });
+    loadExpenses();
+  }, [view]);
 
-  const total = filteredExpenses.reduce((acc, exp) => acc + exp.amount, 0);
+  const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
 
   return (
     <Page>
@@ -94,14 +97,18 @@ const HomePage = () => {
       </Block>
 
       <List>
-        {filteredExpenses.map((expense) => (
+        {expenses.map((expense, index) => (
           <ListItem
-            key={expense.id}
+            key={`${expense.title}-${expense.date}-${index}`}
             title={expense.title}
-            after={`$${expense.amount}`}
+            after={`A$${expense.amount}`}
             text={expense.date}
+            onClick={() => onDeleteExpense(expense.id)}
           />
         ))}
+        {expenses.length === 0 && (
+          <ListItem title="No upcoming expenses" />
+        )}
       </List>
     </Page>
   );
