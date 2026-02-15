@@ -9,14 +9,31 @@ import {
   SegmentedButton,
 } from 'konsta/react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { initializeDatabase } from '../services/database';
 import { StorageService, type ExpenseOccurrence } from '../services/storage';
 
+type ViewType = 'week' | 'fortnight' | 'month';
+
 const HomePage = () => {
-  const [view, setView] = useState<'week' | '2weeks' | 'month'>('2weeks');
-  const [expenses, setExpenses] = useState<ExpenseOccurrence[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const getInitialView = (): ViewType => {
+    const filter = searchParams.get('filter');
+    if (filter === 'week' || filter === 'fortnight' || filter === 'month') {
+      return filter as ViewType;
+    }
+    return 'month';
+  };
+
+  const [view, setView] = useState<ViewType>(getInitialView());
+  const [expenses, setExpenses] = useState<ExpenseOccurrence[]>([]);
+
+  const handleViewChange = (newView: ViewType) => {
+    setView(newView);
+    setSearchParams({ filter: newView }, { replace: true });
+  };
 
   const onDeleteExpense = async (id: string) => {
     if (window.confirm("Do you want to delete this expense?")) {
@@ -32,13 +49,20 @@ const HomePage = () => {
       const db = await initializeDatabase();
       const storage = new StorageService(db);
       
-      const period = view === '2weeks' ? 'fortnight' : view;
-      const data = await storage.listExpenses(period);
+      const data = await storage.listExpenses(view);
       setExpenses(data);
     };
 
     loadExpenses();
   }, [view]);
+
+  // Sync state if URL changes (e.g. back button or manual edit)
+  useEffect(() => {
+    const initialView = getInitialView();
+    if (initialView !== view) {
+      setView(initialView);
+    }
+  }, [searchParams]);
 
   const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
 
@@ -55,25 +79,25 @@ const HomePage = () => {
       />
 
       <Block>
-        <Segmented rounded outline>
+        <Segmented id="filter" rounded outline>
           <SegmentedButton
             className="capitalize"
             active={view === 'week'}
-            onClick={() => setView('week')}
+            onClick={() => handleViewChange('week')}
           >
             Week
           </SegmentedButton>
           <SegmentedButton
             className="capitalize"
-            active={view === '2weeks'}
-            onClick={() => setView('2weeks')}
+            active={view === 'fortnight'}
+            onClick={() => handleViewChange('fortnight')}
           >
             2 Weeks
           </SegmentedButton>
           <SegmentedButton
             className="capitalize"
             active={view === 'month'}
-            onClick={() => setView('month')}
+            onClick={() => handleViewChange('month')}
           >
             Month
           </SegmentedButton>
@@ -91,7 +115,7 @@ const HomePage = () => {
           </span>{' '}
           scheduled for the{' '}
           <span className="whitespace-nowrap underline decoration-blue-500 decoration-8 underline-offset-[12px]">
-            {view === '2weeks' ? 'next 2 weeks' : `next ${view}`}
+            {view === 'fortnight' ? 'next 2 weeks' : `next ${view}`}
           </span>
         </h1>
       </Block>
