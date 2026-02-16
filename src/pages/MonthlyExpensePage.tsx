@@ -98,7 +98,7 @@ const MonthlyExpensePage = () => {
         <span>{monthName}</span>
         <span 
           onClick={navigateToYear}
-          className="cursor-pointer hover:underline"
+          className="cursor-pointer text-blue-500 underline decoration-2 underline-offset-2 hover:text-blue-600 hover:decoration-blue-600 transition-colors"
         >
           {year}
         </span>
