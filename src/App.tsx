@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { App as KonstaApp } from 'konsta/react';
 import MonthlyExpensePage from './pages/MonthlyExpensePage';
+import YearlyExpensePage from './pages/YearlyExpensePage';
 import AddExpensePage from './pages/AddExpensePage';
 import NotFoundPage from './pages/NotFoundPage';
 import { getCurrentMonthContext } from './utils/date';
@@ -17,6 +18,7 @@ function App() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/:year/:month" element={<MonthlyExpensePage />} />
+        <Route path="/:year" element={<YearlyExpensePage />} />
         <Route path="/add" element={<AddExpensePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

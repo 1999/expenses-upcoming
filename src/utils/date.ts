@@ -65,3 +65,35 @@ export const formatMonthlyTitle = (year: number, month: number) => {
 export const getCurrentRangeIndex = (date: Date): number => {
   return date.getDate() <= 14 ? 0 : 1;
 };
+
+export const getYearRange = (year: number) => {
+  const start = new Date(year, 0, 1, 0, 0, 0);
+  const end = new Date(year, 11, 31, 23, 59, 59);
+  return { start, end };
+};
+
+export interface MonthInfo {
+  month: number;
+  name: string;
+  start: Date;
+  end: Date;
+}
+
+export const getAllMonthsForYear = (year: number): MonthInfo[] => {
+  const months: MonthInfo[] = [];
+
+  for (let month = 1; month <= 12; month++) {
+    const date = new Date(year, month - 1, 1);
+    const monthName = date.toLocaleString("en-AU", { month: "long" });
+    const { start, end } = getFullMonthRange(year, month);
+
+    months.push({
+      month,
+      name: monthName,
+      start,
+      end,
+    });
+  }
+
+  return months;
+};

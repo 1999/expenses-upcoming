@@ -14,7 +14,6 @@ import { initializeDatabase } from '../services/database';
 import { StorageService, type ExpenseOccurrence } from '../services/storage';
 import { 
   getSiblingMonth, 
-  formatMonthlyTitle,
   getMonthRanges,
   getCurrentRangeIndex,
 } from '../utils/date';
@@ -49,11 +48,6 @@ const MonthlyExpensePage = () => {
   }, [year, month, isValid]);
 
   const activeRange = ranges[rangeIndex];
-
-  const title = useMemo(() => {
-    if (!isValid) return '';
-    return formatMonthlyTitle(year, month);
-  }, [year, month, isValid]);
 
   const onDeleteExpense = async (id: string) => {
     if (window.confirm("Do you want to delete this expense?")) {
@@ -90,10 +84,32 @@ const MonthlyExpensePage = () => {
 
   const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
 
+  const navigateToYear = () => {
+    navigate(`/${year}`);
+  };
+
+  // Custom title component with clickable year
+  const CustomTitle = () => {
+    const date = new Date(year, month - 1, 1);
+    const monthName = date.toLocaleString("en-AU", { month: "long" });
+    
+    return (
+      <div className="flex items-center justify-center gap-1">
+        <span>{monthName}</span>
+        <span 
+          onClick={navigateToYear}
+          className="cursor-pointer hover:underline"
+        >
+          {year}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <Page>
       <Navbar
-        title={title}
+        title={<CustomTitle />}
         centerTitle
         left={
           <Button onClick={() => navigateToSibling(-1)} clear>
@@ -154,9 +170,8 @@ const MonthlyExpensePage = () => {
         {expenses.length === 0 && (
           <ListItem title="No upcoming expenses" />
         )}
-        <ListItem>
+        <ListItem className="p-4">
           <Button 
-            className="mt-4" 
             large 
             onClick={() => navigate('/add')}
           >
