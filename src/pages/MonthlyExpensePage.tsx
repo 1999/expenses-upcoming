@@ -9,21 +9,51 @@ import {
   SegmentedButton,
 } from 'konsta/react';
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { initializeDatabase } from '../services/database';
 import { StorageService, type ExpenseOccurrence } from '../services/storage';
-import { getMonthName, getMonthRanges, getCurrentRangeIndex } from '../utils/date';
+import { 
+  getSiblingMonth, 
+  formatMonthlyTitle,
+  getMonthRanges,
+  getCurrentRangeIndex,
+} from '../utils/date';
 
-const HomePage = () => {
+const MonthlyExpensePage = () => {
   const navigate = useNavigate();
-  const now = useMemo(() => new Date(), []);
-  const ranges = useMemo(() => getMonthRanges(now), [now]);
+  const { year: yearParam, month: monthParam } = useParams<{ year: string; month: string }>();
   
-  const [rangeIndex, setRangeIndex] = useState<number>(getCurrentRangeIndex(now));
+  const year = parseInt(yearParam || '');
+  const month = parseInt(monthParam || '');
+
+  const isValid = !isNaN(year) && !isNaN(month) && month >= 1 && month <= 12;
+
+  const ranges = useMemo(() => {
+    if (!isValid) return [];
+    return getMonthRanges(year, month);
+  }, [year, month, isValid]);
+
+  const [rangeIndex, setRangeIndex] = useState<number>(0);
   const [expenses, setExpenses] = useState<ExpenseOccurrence[]>([]);
 
+  // Reset range index when month changes to current range if it's the current month, else 0
+  useEffect(() => {
+    if (isValid) {
+      const now = new Date();
+      if (now.getFullYear() === year && (now.getMonth() + 1) === month) {
+        setRangeIndex(getCurrentRangeIndex(now));
+      } else {
+        setRangeIndex(0);
+      }
+    }
+  }, [year, month, isValid]);
+
   const activeRange = ranges[rangeIndex];
-  const monthName = getMonthName(now);
+
+  const title = useMemo(() => {
+    if (!isValid) return '';
+    return formatMonthlyTitle(year, month);
+  }, [year, month, isValid]);
 
   const onDeleteExpense = async (id: string) => {
     if (window.confirm("Do you want to delete this expense?")) {
@@ -35,6 +65,8 @@ const HomePage = () => {
   };
 
   useEffect(() => {
+    if (!isValid || !activeRange) return;
+
     const loadExpenses = async () => {
       const db = await initializeDatabase();
       const storage = new StorageService(db);
@@ -44,18 +76,37 @@ const HomePage = () => {
     };
 
     loadExpenses();
-  }, [activeRange]);
+  }, [activeRange, isValid]);
+
+  if (!isValid) {
+    return <Navigate to="/404" replace />;
+  }
+
+  const navigateToSibling = (offset: number) => {
+    const { year: sYear, month: sMonth } = getSiblingMonth(year, month, offset);
+    const monthStr = sMonth.toString().padStart(2, '0');
+    navigate(`/${sYear}/${monthStr}`);
+  };
 
   const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
 
   return (
     <Page>
       <Navbar
-        title={monthName}
+        title={title}
         centerTitle
+        left={
+          <Button onClick={() => navigateToSibling(-1)} clear>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </Button>
+        }
         right={
-          <Button onClick={() => navigate('/add')} clear>
-            Add
+          <Button onClick={() => navigateToSibling(1)} clear>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </Button>
         }
       />
@@ -85,7 +136,7 @@ const HomePage = () => {
           </span>{' '}
           scheduled for{' '}
           <span className="whitespace-nowrap underline decoration-blue-500 decoration-8 underline-offset-[12px]">
-            {activeRange.label}
+            {activeRange?.label}
           </span>
         </h1>
       </Block>
@@ -103,9 +154,18 @@ const HomePage = () => {
         {expenses.length === 0 && (
           <ListItem title="No upcoming expenses" />
         )}
+        <ListItem>
+          <Button 
+            className="mt-4" 
+            large 
+            onClick={() => navigate('/add')}
+          >
+            Add expense
+          </Button>
+        </ListItem>
       </List>
     </Page>
   );
 };
 
-export default HomePage;
+export default MonthlyExpensePage;

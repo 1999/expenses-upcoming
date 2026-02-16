@@ -30,7 +30,7 @@ Currently, the application has a single `HomePage` that displays expenses in fix
 
 - `HomePage.tsx` will be refactored into `MonthlyExpensePage.tsx`.
 - The component will use `useParams` to retrieve the `year` and `month`.
-- It will calculate the start and end of the specified month to fetch expenses.
+- It will calculate the bi-weekly ranges (1-14 and 15-EOM) for the specified month and provide a `Segmented` control to toggle between them, matching the original `HomePage` functionality.
 
 ### 3. Navigation Controls
 
