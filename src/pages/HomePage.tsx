@@ -8,32 +8,22 @@ import {
   Segmented,
   SegmentedButton,
 } from 'konsta/react';
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { initializeDatabase } from '../services/database';
 import { StorageService, type ExpenseOccurrence } from '../services/storage';
-
-type ViewType = 'week' | 'fortnight' | 'month';
+import { getMonthName, getMonthRanges, getCurrentRangeIndex } from '../utils/date';
 
 const HomePage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  const getInitialView = (): ViewType => {
-    const filter = searchParams.get('filter');
-    if (filter === 'week' || filter === 'fortnight' || filter === 'month') {
-      return filter as ViewType;
-    }
-    return 'month';
-  };
-
-  const [view, setView] = useState<ViewType>(getInitialView());
+  const now = useMemo(() => new Date(), []);
+  const ranges = useMemo(() => getMonthRanges(now), [now]);
+  
+  const [rangeIndex, setRangeIndex] = useState<number>(getCurrentRangeIndex(now));
   const [expenses, setExpenses] = useState<ExpenseOccurrence[]>([]);
 
-  const handleViewChange = (newView: ViewType) => {
-    setView(newView);
-    setSearchParams({ filter: newView }, { replace: true });
-  };
+  const activeRange = ranges[rangeIndex];
+  const monthName = getMonthName(now);
 
   const onDeleteExpense = async (id: string) => {
     if (window.confirm("Do you want to delete this expense?")) {
@@ -49,27 +39,19 @@ const HomePage = () => {
       const db = await initializeDatabase();
       const storage = new StorageService(db);
       
-      const data = await storage.listExpenses(view);
+      const data = await storage.listExpenses(activeRange.start, activeRange.end);
       setExpenses(data);
     };
 
     loadExpenses();
-  }, [view]);
-
-  // Sync state if URL changes (e.g. back button or manual edit)
-  useEffect(() => {
-    const initialView = getInitialView();
-    if (initialView !== view) {
-      setView(initialView);
-    }
-  }, [searchParams]);
+  }, [activeRange]);
 
   const total = expenses.reduce((acc, exp) => acc + exp.amount, 0);
 
   return (
     <Page>
       <Navbar
-        title="Upcoming Expenses"
+        title={monthName}
         centerTitle
         right={
           <Button onClick={() => navigate('/add')} clear>
@@ -80,27 +62,15 @@ const HomePage = () => {
 
       <Block>
         <Segmented id="filter" rounded outline>
-          <SegmentedButton
-            className="capitalize"
-            active={view === 'week'}
-            onClick={() => handleViewChange('week')}
-          >
-            Week
-          </SegmentedButton>
-          <SegmentedButton
-            className="capitalize"
-            active={view === 'fortnight'}
-            onClick={() => handleViewChange('fortnight')}
-          >
-            2 Weeks
-          </SegmentedButton>
-          <SegmentedButton
-            className="capitalize"
-            active={view === 'month'}
-            onClick={() => handleViewChange('month')}
-          >
-            Month
-          </SegmentedButton>
+          {ranges.map((range, index) => (
+            <SegmentedButton
+              key={range.label}
+              active={rangeIndex === index}
+              onClick={() => setRangeIndex(index)}
+            >
+              {range.label}
+            </SegmentedButton>
+          ))}
         </Segmented>
       </Block>
 
@@ -113,9 +83,9 @@ const HomePage = () => {
               maximumFractionDigits: 0,
             })}
           </span>{' '}
-          scheduled for the{' '}
+          scheduled for{' '}
           <span className="whitespace-nowrap underline decoration-blue-500 decoration-8 underline-offset-[12px]">
-            {view === 'fortnight' ? 'next 2 weeks' : `next ${view}`}
+            {activeRange.label}
           </span>
         </h1>
       </Block>

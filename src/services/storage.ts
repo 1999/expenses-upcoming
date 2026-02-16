@@ -33,7 +33,8 @@ export class StorageService {
   }
 
   async listExpenses(
-    upcomingPeriod: "week" | "fortnight" | "month",
+    startDate: Date,
+    endDate: Date,
   ): Promise<ExpenseOccurrence[]> {
     const expenses = await this.db.getOneStore<{
       id: string;
@@ -42,21 +43,12 @@ export class StorageService {
       rrule: string;
     }>("expenses");
 
-    const now = new Date();
-    const end = new Date();
-    if (upcomingPeriod === "week") {
-      end.setDate(now.getDate() + 7);
-    } else if (upcomingPeriod === "fortnight") {
-      end.setDate(now.getDate() + 14);
-    } else {
-      end.setMonth(now.getMonth() + 1);
-    }
-
     const occurrences: ExpenseOccurrence[] = [];
 
     for (const expense of expenses) {
       const rule = RRule.fromString(expense.rrule);
-      const dates = rule.between(now, end, true);
+      // Ensure we include both boundaries
+      const dates = rule.between(startDate, endDate, true);
 
       for (const date of dates) {
         occurrences.push({
@@ -68,6 +60,12 @@ export class StorageService {
       }
     }
 
-    return occurrences.sort((a, b) => a.date.localeCompare(b.date));
+    return occurrences.sort((a, b) => {
+      const parseDate = (d: string) => {
+        const [day, month, year] = d.split("/").map(Number);
+        return new Date(year, month - 1, day).getTime();
+      };
+      return parseDate(a.date) - parseDate(b.date);
+    });
   }
 }

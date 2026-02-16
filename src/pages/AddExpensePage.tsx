@@ -35,7 +35,7 @@ const AddExpensePage = () => {
     });
 
     await storage.addExpense(title, parseFloat(amount), rrule);
-    navigate('/?filter=month');
+    navigate('/');
   };
 
   return (
